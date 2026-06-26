@@ -6,6 +6,44 @@ import curses.ascii
 import os
 import sys
 
+if sys.platform == "win32":
+    import ctypes
+
+    def set_os_clipboard(text):
+        """Mirror text into the real Windows clipboard.
+
+        Windows Terminal intercepts Ctrl+V itself and injects the OS
+        clipboard contents as literal keystrokes before this app ever sees
+        a Ctrl+V keycode, bypassing self.clipboard entirely. Keeping the OS
+        clipboard in sync makes that injected paste match what was copied.
+        """
+        CF_UNICODETEXT = 13
+        GMEM_MOVEABLE = 0x0002
+        user32 = ctypes.windll.user32
+        kernel32 = ctypes.windll.kernel32
+        # Pointers are 64-bit; without restype/argtypes ctypes truncates them to 32-bit ints.
+        kernel32.GlobalAlloc.restype = ctypes.c_void_p
+        kernel32.GlobalAlloc.argtypes = [ctypes.c_uint, ctypes.c_size_t]
+        kernel32.GlobalLock.restype = ctypes.c_void_p
+        kernel32.GlobalLock.argtypes = [ctypes.c_void_p]
+        kernel32.GlobalUnlock.argtypes = [ctypes.c_void_p]
+        user32.SetClipboardData.argtypes = [ctypes.c_uint, ctypes.c_void_p]
+        if not user32.OpenClipboard(None):
+            return
+        try:
+            user32.EmptyClipboard()
+            data = text.encode("utf-16le") + b"\x00\x00"
+            hmem = kernel32.GlobalAlloc(GMEM_MOVEABLE, len(data))
+            pmem = kernel32.GlobalLock(hmem)
+            ctypes.memmove(pmem, data, len(data))
+            kernel32.GlobalUnlock(hmem)
+            user32.SetClipboardData(CF_UNICODETEXT, hmem)
+        finally:
+            user32.CloseClipboard()
+else:
+    def set_os_clipboard(text):
+        pass
+
 
 class Editor:
     def __init__(self, stdscr, filename):
@@ -40,13 +78,16 @@ class Editor:
         self.title_attr = curses.A_REVERSE
         self.status_attr = curses.A_REVERSE
         self.sel_attr = curses.A_REVERSE
+        self.warning_attr = curses.A_REVERSE
         if curses.has_colors():
             curses.start_color()
             curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLUE)
             curses.init_pair(2, curses.COLOR_BLACK, curses.COLOR_YELLOW)
+            curses.init_pair(3, curses.COLOR_WHITE, curses.COLOR_RED)
             self.title_attr = curses.color_pair(1)
             self.status_attr = curses.color_pair(1)
             self.sel_attr = curses.color_pair(2)
+            self.warning_attr = curses.color_pair(3)
 
     @property
     def rows(self):
@@ -339,11 +380,13 @@ class Editor:
         if self.sel_anchor is not None:
             self.clipboard = self.selected_text()
             self.clipboard_is_line = False
+            set_os_clipboard(self.clipboard)
             self.delete_selection()
             self.message = "Cut selection"
             return
         self.clipboard = self.lines[self.cy]
         self.clipboard_is_line = True
+        set_os_clipboard(self.clipboard)
         if len(self.lines) > 1:
             del self.lines[self.cy]
             self.cy = min(self.cy, len(self.lines) - 1)
@@ -357,11 +400,13 @@ class Editor:
         if self.sel_anchor is not None:
             self.clipboard = self.selected_text()
             self.clipboard_is_line = False
+            set_os_clipboard(self.clipboard)
             self.sel_anchor = None
             self.message = "Copied selection"
             return
         self.clipboard = self.lines[self.cy]
         self.clipboard_is_line = True
+        set_os_clipboard(self.clipboard)
         self.message = "Copied line"
 
     def paste(self):
@@ -385,12 +430,14 @@ class Editor:
         self.dirty = True
         self.message = "Pasted"
 
-    def prompt(self, label):
+    def prompt(self, label, attr=None):
         maxy, maxx = self.stdscr.getmaxyx()
         curses.curs_set(1)
         buf = ""
+        if attr is None:
+            attr = curses.A_REVERSE
         while True:
-            self.stdscr.addnstr(maxy - 1, 0, (label + buf).ljust(maxx), maxx - 1, curses.A_REVERSE)
+            self.stdscr.addnstr(maxy - 1, 0, (label + buf).ljust(maxx), maxx - 1, attr)
             self.stdscr.move(maxy - 1, min(len(label) + len(buf), maxx - 1))
             self.stdscr.refresh()
             try:
@@ -444,7 +491,7 @@ class Editor:
 
     def exit(self):
         if self.dirty:
-            ans = self.prompt("Save modified buffer? (y/N): ")
+            ans = self.prompt("Save modified buffer? (y/N): ", attr=self.warning_attr)
             if ans and ans.lower().startswith("y"):
                 self.save()
         self.quit_pending = True
