@@ -7,7 +7,16 @@ $repoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $installDir = "$env:USERPROFILE\.local\bin"
 
 Set-Location $repoRoot
-python -m PyInstaller editor.spec
+
+python -m pip install -r requirements.txt
+if ($LASTEXITCODE -ne 0) {
+    throw "pip install failed with exit code $LASTEXITCODE"
+}
+
+python -m PyInstaller --noconfirm editor.spec
+if ($LASTEXITCODE -ne 0) {
+    throw "PyInstaller failed with exit code $LASTEXITCODE"
+}
 
 if (-not (Test-Path $installDir)) {
     New-Item -ItemType Directory -Path $installDir -Force | Out-Null
