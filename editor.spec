@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['edit.py'],
+    ['editor.py'],
     pathex=[],
     binaries=[],
     datas=[],
@@ -22,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='edit',
+    name='editor',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

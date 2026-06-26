@@ -1,4 +1,4 @@
-# edit
+# editor
 
 A nano / pico-style terminal text editor, written in Python with `curses`.
 
@@ -13,7 +13,7 @@ A nano / pico-style terminal text editor, written in Python with `curses`.
 
 | Key      | Action          |
 |----------|-----------------|
-| `^Q`     | Quit            |
+| `^Q` / `^D` | Quit         |
 | `^S`     | Save            |
 | `^F`     | Search          |
 | `^X`     | Cut line / selection  |
@@ -37,10 +37,10 @@ pip install -r requirements.txt
 ## Usage
 
 ```bash
-python edit.py [filename]
+python editor.py [filename]
 ```
 
-If no filename is given, edit opens with an empty, unnamed buffer.
+If no filename is given, editor opens with an empty, unnamed buffer.
 
 ## License
 

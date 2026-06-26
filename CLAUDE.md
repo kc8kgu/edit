@@ -4,18 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-`edit` is a nano/pico-style terminal text editor written in pure Python using `curses`. The entire implementation lives in a single file, [edit.py](edit.py) (one `Editor` class).
+`editor` is a nano/pico-style terminal text editor written in pure Python using `curses`. The entire implementation lives in a single file, [editor.py](editor.py) (one `Editor` class).
 
 ## Commands
 
-- Run: `python edit.py [filename]` (no filename opens an empty unnamed buffer)
+- Run: `python editor.py [filename]` (no filename opens an empty unnamed buffer)
 - Install deps: `pip install -r requirements.txt` (only pulls `windows-curses` on Windows, since `curses` is stdlib on Linux/macOS)
-- Build a standalone executable: `pyinstaller edit.spec` (produces `dist/edit`)
+- Build a standalone executable: `pyinstaller editor.spec` (produces `dist/editor`)
 - There are no tests, linter, or CI config in this repo.
 
 ## Architecture
 
-Everything is one `Editor` class in [edit.py](edit.py) driven by `curses.wrapper(main, filename)`:
+Everything is one `Editor` class in [editor.py](editor.py) driven by `curses.wrapper(main, filename)`:
 
 - **Buffer model**: `self.lines` is a plain list of strings (no rope/gap buffer). Cursor position is `(self.cy, self.cx)` — row/col into that list. `self.top` is the first visible buffer row, used for scrolling.
 - **Main loop** (`run`): draw → blocking `getch()` → `handle_key(ch)` → repeat until `quit_pending`.

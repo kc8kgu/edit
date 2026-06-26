@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Edit - a nano / pico-style terminal text editor."""
+"""Editor - a nano / pico-style terminal text editor."""
 
 import curses
 import curses.ascii
@@ -68,7 +68,7 @@ class Editor:
         maxy, maxx = self.stdscr.getmaxyx()
 
         path = os.path.abspath(self.filename) if self.filename else "[No Name]"
-        title = f" edit  -  {path}{' *' if self.dirty else ''} "
+        title = f" editor  -  {path}{' *' if self.dirty else ''} "
         self.stdscr.addnstr(0, 0, title.center(maxx), maxx - 1, self.title_attr)
 
         self.scroll()
@@ -213,6 +213,8 @@ class Editor:
         elif code in (curses.ascii.CR, curses.ascii.NL, 10, 13):
             self.newline()
         elif code == curses.ascii.ctrl(ord("q")):  # ^Q exit
+            self.exit()
+        elif code == curses.ascii.ctrl(ord("d")):  # ^D exit
             self.exit()
         elif code == curses.ascii.ctrl(ord("s")):  # ^S save
             self.save()
